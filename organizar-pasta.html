@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organizar Pasta</title>
+<style>
+  :root {
+    --bg: #F5F0E6;
+    --panel: #FFFFFF;
+    --ink: #2B2620;
+    --muted: #8A7F6E;
+    --amber: #C08A3E;
+    --amber-dark: #9C6E2E;
+    --border: #E4DACB;
+    --danger: #B4543A;
+    --success: #4A7A4A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 560px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 28px 0;
+    line-height: 1.5;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+  }
+  .step-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--amber-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .folder-name {
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    word-break: break-all;
+  }
+  button.primary {
+    background: var(--amber);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 13px 20px;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s ease;
+  }
+  button.primary:hover:not(:disabled) { background: var(--amber-dark); }
+  button.primary:disabled {
+    background: var(--border);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+  button.secondary {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 13px 20px;
+    font-size: 14.5px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
+  button.secondary:hover { border-color: var(--muted); }
+
+  .summary {
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+  .summary strong { color: var(--amber-dark); }
+
+  .log {
+    margin-top: 18px;
+    max-height: 220px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: none;
+  }
+  .log div { padding: 2px 0; }
+  .log .err { color: var(--danger); }
+
+  .status {
+    margin-top: 16px;
+    font-size: 14px;
+    text-align: center;
+  }
+  .status.success { color: var(--success); font-weight: 600; }
+  .status.error { color: var(--danger); }
+
+  .unsupported {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .unsupported strong { color: var(--danger); }
+
+  .hint {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Organizar Pasta</h1>
+  <p class="subtitle">Junta todos os arquivos que estão dentro das subpastas e coloca direto na pasta principal.</p>
+
+  <div id="unsupportedBox" class="unsupported" style="display:none;">
+    Esse navegador não suporta essa função. Abra esta página no <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong> e tente de novo.
+  </div>
+
+  <div id="mainCard" class="card">
+    <div class="step-label">Passo 1</div>
+    <button class="primary" id="selectBtn">Escolher pasta</button>
+    <div id="folderInfo"></div>
+
+    <div id="previewArea" style="display:none; margin-top:20px;">
+      <div class="step-label">Passo 2</div>
+      <div class="summary" id="summaryText"></div>
+      <button class="primary" id="confirmBtn">Mover arquivos para a raiz</button>
+      <button class="secondary" id="cancelBtn">Cancelar</button>
+    </div>
+
+    <div id="statusArea" class="status"></div>
+    <div id="logArea" class="log"></div>
+  </div>
+
+  <p class="hint">Nada é enviado para a internet — tudo acontece direto no seu computador, dentro do navegador.</p>
+</div>
+
+<script>
+const selectBtn = document.getElementById('selectBtn');
+const confirmBtn = document.getElementById('confirmBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const folderInfo = document.getElementById('folderInfo');
+const previewArea = document.getElementById('previewArea');
+const summaryText = document.getElementById('summaryText');
+const statusArea = document.getElementById('statusArea');
+const logArea = document.getElementById('logArea');
+const mainCard = document.getElementById('mainCard');
+const unsupportedBox = document.getElementById('unsupportedBox');
+
+let rootHandle = null;
+let pendingFiles = [];
+
+if (!window.showDirectoryPicker) {
+  mainCard.style.display = 'none';
+  unsupportedBox.style.display = 'block';
+}
+
+selectBtn.addEventListener('click', async () => {
+  statusArea.textContent = '';
+  statusArea.className = 'status';
+  logArea.style.display = 'none';
+  logArea.innerHTML = '';
+  previewArea.style.display = 'none';
+
+  try {
+    rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+  } catch (e) {
+    return; // usuário cancelou a seleção
+  }
+
+  folderInfo.innerHTML = `<div class="folder-name">📁 ${rootHandle.name}</div>`;
+  selectBtn.disabled = true;
+  selectBtn.textContent = 'Analisando pasta...';
+
+  pendingFiles = await collectFiles(rootHandle, 0);
+
+  selectBtn.disabled = false;
+  selectBtn.textContent = 'Escolher pasta';
+
+  if (pendingFiles.length === 0) {
+    statusArea.textContent = 'Não há arquivos em subpastas para mover — essa pasta já está organizada.';
+    statusArea.className = 'status';
+    return;
+  }
+
+  summaryText.innerHTML = `Encontrei <strong>${pendingFiles.length}</strong> arquivo(s) dentro de subpastas.<br>Eles serão movidos para a raiz de <strong>${rootHandle.name}</strong>.`;
+  previewArea.style.display = 'block';
+});
+
+cancelBtn.addEventListener('click', () => {
+  previewArea.style.display = 'none';
+  pendingFiles = [];
+  folderInfo.innerHTML = '';
+});
+
+confirmBtn.addEventListener('click', async () => {
+  confirmBtn.disabled = true;
+  cancelBtn.disabled = true;
+  statusArea.innerHTML = '<span class="spinner"></span>Movendo arquivos...';
+  statusArea.className = 'status';
+  logArea.style.display = 'block';
+  logArea.innerHTML = '';
+
+  let sucesso = 0;
+  let falhas = 0;
+
+  for (const item of pendingFiles) {
+    try {
+      const finalName = await moveFileToRoot(rootHandle, item);
+      logEntry(`OK: ${finalName}`, false);
+      sucesso++;
+    } catch (e) {
+      logEntry(`Erro em "${item.name}": ${e.message}`, true);
+      falhas++;
+    }
+  }
+
+  confirmBtn.disabled = false;
+  cancelBtn.disabled = false;
+  previewArea.style.display = 'none';
+  pendingFiles = [];
+
+  if (falhas === 0) {
+    statusArea.textContent = `Pronto! ${sucesso} arquivo(s) movido(s) com sucesso.`;
+    statusArea.className = 'status success';
+  } else {
+    statusArea.textContent = `Concluído com avisos: ${sucesso} movido(s), ${falhas} com erro (veja abaixo).`;
+    statusArea.className = 'status error';
+  }
+});
+
+function logEntry(text, isError) {
+  const div = document.createElement('div');
+  if (isError) div.className = 'err';
+  div.textContent = text;
+  logArea.appendChild(div);
+  logArea.scrollTop = logArea.scrollHeight;
+}
+
+// Percorre subpastas recursivamente. depth 0 = raiz (ignorada); depth >= 1 = subpasta (incluída).
+async function collectFiles(dirHandle, depth) {
+  let results = [];
+  for await (const entry of dirHandle.values()) {
+    if (entry.kind === 'file') {
+      if (depth > 0) {
+        results.push({ parent: dirHandle, name: entry.name, handle: entry });
+      }
+    } else if (entry.kind === 'directory') {
+      const sub = await collectFiles(entry, depth + 1);
+      results = results.concat(sub);
+    }
+  }
+  return results;
+}
+
+// Move um arquivo para a raiz, evitando sobrescrever nomes duplicados (adiciona _1, _2, ...)
+async function moveFileToRoot(root, item) {
+  const file = await item.handle.getFile();
+  const dotIndex = item.name.lastIndexOf('.');
+  const base = dotIndex >= 0 ? item.name.slice(0, dotIndex) : item.name;
+  const ext = dotIndex >= 0 ? item.name.slice(dotIndex) : '';
+
+  let finalName = item.name;
+  let counter = 1;
+  while (await fileExists(root, finalName)) {
+    finalName = `${base}_${counter}${ext}`;
+    counter++;
+  }
+
+  const destHandle = await root.getFileHandle(finalName, { create: true });
+  const writable = await destHandle.createWritable();
+  await writable.write(file);
+  await writable.close();
+
+  await item.parent.removeEntry(item.name);
+
+  return finalName;
+}
+
+async function fileExists(dirHandle, name) {
+  try {
+    await dirHandle.getFileHandle(name, { create: false });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+</script>
+</body>
+</html>
